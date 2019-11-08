@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    k8s-app: wordpress-php
+    qcloud-app: wordpress-php
+  name: wordpress-php
+  namespace: lnmp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      k8s-app: wordpress-php
+      qcloud-app: wordpress-php
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        k8s-app: wordpress-php
+        qcloud-app: wordpress-php
+    spec:
+      containers:
+      - env:
+        - name: PATH
+          value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+        image: ccr.ccs.tencentyun.com/chenyong/php:5.6.31-fpm-mysql-wp
+        imagePullPolicy: Always 
+        name: php
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 250m
+            memory: 256Mi
+        volumeMounts:
+        - mountPath: /var/www/wordpress/wp-config.php
+          name: wp-config
+          subPath: wp-config.php 
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+      - name: qcloudregistrykey
+      - name: tencenthubkey
+      restartPolicy: Always
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: php-wp-config
+        name: wp-config
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress-php
+  namespace: lnmp
+spec:
+  ports:
+  - name: tcp-9000-9000
+    port: 9000
+    protocol: TCP
+    targetPort: 9000
+  selector:
+    k8s-app: wordpress-php
+    qcloud-app: wordpress-php
+  type: ClusterIP
